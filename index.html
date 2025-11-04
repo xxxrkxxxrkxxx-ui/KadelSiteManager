@@ -580,98 +580,121 @@
         </div>
     </div>
 
-    <script>
-        // --- DATABASE ---
-        let sites = [
+    <!-- NEW: Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            addDoc, 
+            setDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection,
+            writeBatch,
+            getDocs,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DEFAULT DATABASE (for seeding) ---
+        const defaultSites = [
             // ... (Database remains unchanged) ...
-            { id: 1, manager: "Doug Fletcher", address: "736 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 2, manager: "Doug Fletcher", address: "600 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 3, manager: "Doug Fletcher", address: "120 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 4, manager: "Jason Daugherty", address: "1128 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 5, manager: "Jason Daugherty", address: "420 23rd St", uniform: { blazer: "Green Jacket", pant: "Cargo (Blk)", shirt: "Polo (Blk)", tie: "---" } },
-            { id: 6, manager: "Jason Daugherty", address: "1 La Avanzada St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 7, manager: "Jason Daugherty", address: "500 Howard St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 8, manager: "Jason Daugherty", address: "500 Pine St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 9, manager: "Jason Daugherty", address: "1800 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 10, manager: "Jason Daugherty", address: "130 Battery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 11, manager: "Jason Daugherty", address: "1400 Geary Blvd", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 12, manager: "Jason Daugherty", address: "300 Kansas St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 13, manager: "Jason Daugherty", address: "633 Folsom St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 14, manager: "Jason Daugherty", address: "501 2nd St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 15, manager: "Jason Daugherty", address: "111 Pine St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 16, manager: "Jason Daugherty", address: "400 Paul Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 17, manager: "Jason Daugherty", address: "1 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 18, manager: "Jason Daugherty", address: "1200 Van Ness Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 19, manager: "Aldo Diaz", address: "181 Fremont St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
-            { id: 20, manager: "Aldo Diaz", address: "274 Brannan St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
-            { id: 21, manager: "Aldo Diaz", address: "360 Spear St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
-            { id: 22, manager: "Aldo Diaz", address: "1035 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 23, manager: "Aldo Diaz", address: "150 Spear St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 24, manager: "Aldo Diaz", address: "750 Battery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 25, manager: "Aldo Diaz", address: "1635 Divisadero St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 26, manager: "Aldo Diaz", address: "115 Sansome St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 27, manager: "Aldo Diaz", address: "180 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 28, manager: "Aldo Diaz", address: "220 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 29, manager: "Aldo Diaz", address: "601 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 30, manager: "Aldo Diaz", address: "711 Eddy St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 31, manager: "Aldo Diaz", address: "1280 Laguna St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 32, manager: "Aldo Diaz", address: "71 Stevenson St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 33, manager: "Mohamed Ezzat", address: "240 Stockton St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 34, manager: "Mohamed Ezzat", address: "30 Grant Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 35, manager: "Mohamed Ezzat", address: "170 Maiden Lane", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 36, manager: "Mohamed Ezzat", address: "599 Skyline Blvd", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 37, manager: "Mohamed Ezzat", address: "456 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 38, manager: "Mohamed Ezzat", address: "717 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 39, manager: "Mohamed Ezzat", address: "201 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 40, manager: "Mohamed Ezzat", address: "101 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 41, manager: "Mohamed Ezzat", address: "100 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 42, manager: "Mohamed Ezzat", address: "166 Geary St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 43, manager: "Inderprit Gill", address: "26 O'Farrell St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 44, manager: "Inderprit Gill", address: "153 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 45, manager: "Inderprit Gill", address: "110 Sutter St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 46, manager: "Inderprit Gill", address: "311 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 47, manager: "Inderprit Gill", address: "90 New Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 48, manager: "Inderprit Gill", address: "785 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 49, manager: "Inderprit Gill", address: "230 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 50, manager: "Inderprit Gill", address: "101 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 51, manager: "Inderprit Gill", address: "425 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 52, manager: "Inderprit Gill", address: "210 Post St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 53, manager: "Inderprit Gill", address: "30 Maiden Lane", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 54, manager: "Inderprit Gill", address: "222 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 55, manager: "Inderprit Gill", address: "150 Post St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 56, manager: "Inderprit Gill", address: "1019 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
-            { id: 57, manager: "Inderprit Gill", address: "425 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Doug Fletcher", address: "736 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Doug Fletcher", address: "600 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Doug Fletcher", address: "120 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "1128 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "420 23rd St", uniform: { blazer: "Green Jacket", pant: "Cargo (Blk)", shirt: "Polo (Blk)", tie: "---" } },
+            { manager: "Jason Daugherty", address: "1 La Avanzada St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "500 Howard St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "500 Pine St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "1800 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "130 Battery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "1400 Geary Blvd", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "300 Kansas St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "633 Folsom St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "501 2nd St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "111 Pine St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "400 Paul Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "1 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Jason Daugherty", address: "1200 Van Ness Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "181 Fremont St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
+            { manager: "Aldo Diaz", address: "274 Brannan St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
+            { manager: "Aldo Diaz", address: "360 Spear St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
+            { manager: "Aldo Diaz", address: "1035 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "150 Spear St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "750 Battery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "1635 Divisadero St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "115 Sansome St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "180 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "220 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "601 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "711 Eddy St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "1280 Laguna St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Aldo Diaz", address: "71 Stevenson St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "240 Stockton St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "30 Grant Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "170 Maiden Lane", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "599 Skyline Blvd", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "456 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "717 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "201 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "101 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "100 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Mohamed Ezzat", address: "166 Geary St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "26 O'Farrell St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "153 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "110 Sutter St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "311 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "90 New Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "785 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "230 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "101 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "425 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "210 Post St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "30 Maiden Lane", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "222 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "150 Post St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "1019 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { manager: "Inderprit Gill", address: "425 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
         ];
 
-        // --- GLOBAL STATE ---
+        // --- GLOBAL APP STATE ---
+        let sites = []; // This will be filled by Firestore
         const ACCESS_CODE = "91965";
         let onConfirmCallback = null;
+        
+        // --- FIREBASE GLOBALS ---
+        let app, auth, db, userId, sitesCollectionRef;
+        let unsubscribeFromSites = null; // To store the snapshot listener
+
+        // --- REMOVED LOCAL STORAGE ---
+        // const STORAGE_KEY = 'siteManagerSites';
+        // function persistData() ...
+        // function loadInitialData() ...
 
         // --- DOM ELEMENTS ---
         const searchInput = document.getElementById('searchInput');
         const suggestions = document.getElementById('suggestions');
         const siteDetails = document.getElementById('siteDetails');
         const settingsButton = document.getElementById('settingsButton');
-
-        // New: Access Granted Overlay elements
         const accessGrantedOverlay = document.getElementById('accessGrantedOverlay');
         const typingEffectSpan = document.getElementById('typingEffect');
         const cursorSpan = document.getElementById('cursor');
-        
-        // Auth Modal
         const authModal = document.getElementById('authModal');
         const closeAuthModal = document.getElementById('closeAuthModal');
         const authForm = document.getElementById('authForm');
         const accessCodeInput = document.getElementById('accessCodeInput');
         const authError = document.getElementById('authError');
-
-        // Settings Panel
         const settingsPanel = document.getElementById('settingsPanel');
         const closeSettingsPanel = document.getElementById('closeSettingsPanel');
         const siteList = document.getElementById('siteList');
         const createSiteButton = document.getElementById('createSiteButton');
-        
-        // Edit Modal
         const editModal = document.getElementById('editModal');
         const editModalTitle = document.getElementById('editModalTitle');
         const cancelEditButton = document.getElementById('cancelEditButton');
@@ -685,8 +708,6 @@
         const editPant = document.getElementById('editPant');
         const editShirt = document.getElementById('editShirt');
         const editTie = document.getElementById('editTie');
-
-        // Confirmation Modal
         const confirmModal = document.getElementById('confirmModal');
         const confirmTitle = document.getElementById('confirmTitle');
         const confirmMessage = document.getElementById('confirmMessage');
@@ -694,11 +715,11 @@
         const confirmDeleteButton = document.getElementById('confirmDeleteButton');
 
         // --- GLOBAL HELPER ---
-        /** Helper function for delays */
         const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // --- NODE BACKGROUND LOGIC ---
+        // --- NODE BACKGROUND LOGIC (Unchanged) ---
         const canvas = document.getElementById('nodeCanvas');
+        // ... (All canvas, particle, and animation logic remains identical) ...
         const ctx = canvas.getContext('2d');
         let particles = [];
         const particleCount = 20;
@@ -803,9 +824,10 @@
 
         createParticles();
         animate();
+        // --- END NODE BACKGROUND LOGIC ---
 
-        // --- RENDER FUNCTIONS ---
 
+        // --- RENDER FUNCTIONS (Unchanged) ---
         function renderSuggestions(matches) {
             if (matches.length === 0) {
                 suggestions.classList.add('hidden');
@@ -823,7 +845,6 @@
             suggestions.classList.remove('hidden');
         }
 
-        /** Renders the static shell for site details */
         function setupSiteDetails() {
             siteDetails.innerHTML = `
                 <button id="backButton" class="btn" style="margin-bottom: 15px; margin-left: 0;">&larr; Back</button>
@@ -853,7 +874,6 @@
                 </div>
             `;
             
-            // Add listener for the new back button
             siteDetails.querySelector('#backButton').addEventListener('click', () => {
                 siteDetails.classList.add('hidden');
                 searchInput.value = '';
@@ -863,12 +883,8 @@
             siteDetails.classList.remove('hidden');
         }
         
-        /** NEW: Animates the site details with a typewriter effect */
         async function animateSiteDetails(site) {
-            // 1. Render the static shell
             setupSiteDetails();
-
-            // 2. Get references to the value spans
             const detailAddress = document.getElementById('detailAddress');
             const detailManager = document.getElementById('detailManager');
             const detailBlazer = document.getElementById('detailBlazer');
@@ -876,7 +892,6 @@
             const detailShirt = document.getElementById('detailShirt');
             const detailTie = document.getElementById('detailTie');
 
-            // 3. Define the jobs
             const jobs = [
                 { el: detailAddress, text: site.address },
                 { el: detailManager, text: site.manager },
@@ -886,14 +901,12 @@
                 { el: detailTie, text: site.uniform.tie || '---' },
             ];
 
-            // 4. Calculate total characters and speed
             const totalChars = jobs.reduce((acc, job) => acc + job.text.length, 0);
-            const totalDuration = 2000; // 2 seconds
-            const speed = totalDuration / totalChars; // ms per character
+            const totalDuration = 2000;
+            const speed = totalDuration / totalChars;
 
-            // 5. Define the helper function to type one line
             async function typeLine(element, text, charSpeed) {
-                element.textContent = ''; // Clear it
+                element.textContent = '';
                 let currentText = '';
                 const cursorHTML = `<span style="animation: blink 1s step-end infinite;">_</span>`;
                 
@@ -903,16 +916,15 @@
                     await wait(charSpeed);
                 }
                 
-                element.textContent = text; // Set final text without cursor
+                element.textContent = text;
             }
 
-            // 6. Execute the jobs sequentially
             for (const job of jobs) {
                 await typeLine(job.el, job.text, speed);
             }
         }
         
-        /** Renders the list of all sites in the settings panel */
+        /** UPDATED: renderSiteList now reads from global `sites` array */
         function renderSiteList() {
             siteList.innerHTML = '';
             if (sites.length === 0) {
@@ -920,12 +932,13 @@
                 return;
             }
             
+            // Sort sites by address alphabetically
             const sortedSites = [...sites].sort((a, b) => a.address.localeCompare(b.address));
             
             sortedSites.forEach(site => {
                 const item = document.createElement('div');
                 item.className = 'site-list-item';
-                item.dataset.id = site.id;
+                item.dataset.id = site.id; // Firestore document ID
                 
                 item.innerHTML = `
                     <div class="site-list-info">
@@ -935,19 +948,18 @@
                     <button class="btn edit-btn">Edit</button>
                 `;
                 
+                // Pass the full site object (which includes the Firestore id)
                 item.querySelector('.edit-btn').addEventListener('click', () => openEditModal(site));
                 siteList.appendChild(item);
             });
         }
-
-        <!-- DELETED BROKEN CODE BLOCK -->
-        <!-- The syntax error was here. A mangled copy of openEditModal and a duplicate selectSite was removed. -->
-
+        
+        // --- MODAL FUNCTIONS (Mostly Unchanged) ---
         function openEditModal(site) {
             if (site) {
                 // Editing existing site
                 editModalTitle.textContent = 'Edit Site';
-                editSiteId.value = site.id;
+                editSiteId.value = site.id; // Firestore ID
                 editAddress.value = site.address;
                 editManager.value = site.manager;
                 editBlazer.value = site.uniform.blazer;
@@ -959,7 +971,7 @@
                 // Creating new site
                 editModalTitle.textContent = 'Create New Site';
                 editForm.reset();
-                editSiteId.value = '';
+                editSiteId.value = ''; // No ID
                 deleteSiteButton.classList.add('hidden');
             }
             editModal.classList.remove('hidden');
@@ -982,9 +994,59 @@
             onConfirmCallback = null;
         }
 
-        function saveSite() {
+        // --- UPDATED: FIRESTORE DATA FUNCTIONS ---
+
+        /** NEW: Seed database with default data if it's empty */
+        async function seedDefaultData() {
+            console.log("Seeding database with default sites...");
+            const batch = writeBatch(db);
+            defaultSites.forEach((site) => {
+                const docRef = doc(sitesCollectionRef); // Create a new doc with auto-ID
+                batch.set(docRef, site);
+            });
+            await batch.commit();
+            console.log("Seeding complete.");
+        }
+
+        /** NEW: Load data from Firestore and listen for changes */
+        async function loadInitialData() {
+            if (!sitesCollectionRef) {
+                console.error("Firestore collection reference is not set.");
+                return;
+            }
+
+            // Check if data already exists, to avoid seeding twice
+            const initialSnapshot = await getDocs(sitesCollectionRef);
+            if (initialSnapshot.empty) {
+                await seedDefaultData();
+            }
+
+            // Unsubscribe from any previous listener
+            if (unsubscribeFromSites) {
+                unsubscribeFromSites();
+            }
+
+            // Listen for realtime updates
+            unsubscribeFromSites = onSnapshot(sitesCollectionRef, (snapshot) => {
+                sites = []; // Clear local array
+                snapshot.forEach((doc) => {
+                    sites.push({ id: doc.id, ...doc.data() });
+                });
+                renderSiteList(); // Re-render the list with new data
+            }, (error) => {
+                console.error("Error listening to site data:", error);
+            });
+        }
+        
+        /** UPDATED: saveSite now writes to Firestore */
+        async function saveSite() {
+            if (!sitesCollectionRef) {
+                console.error("Firestore is not initialized.");
+                return;
+            }
+
             const id = editSiteId.value;
-            const updatedSite = {
+            const updatedSite = { // No ID field, Firestore handles that
                 address: editAddress.value,
                 manager: editManager.value,
                 uniform: {
@@ -1000,33 +1062,47 @@
                 return;
             }
 
-            if (id) {
-                const index = sites.findIndex(s => s.id == id);
-                if (index !== -1) {
-                    sites[index] = { ...sites[index], ...updatedSite };
+            try {
+                if (id) {
+                    // Update existing site
+                    const docRef = doc(db, sitesCollectionRef.path, id);
+                    await setDoc(docRef, updatedSite, { merge: true });
+                } else {
+                    // Create new site
+                    await addDoc(sitesCollectionRef, updatedSite);
                 }
-            } else {
-                updatedSite.id = Date.now();
-                sites.push(updatedSite);
+                closeEditModal();
+                // No need to call renderSiteList() or persistData()
+                // The onSnapshot listener will handle the update automatically.
+            } catch (error) {
+                console.error("Error saving site:", error);
             }
-            
-            renderSiteList();
-            closeEditModal();
         }
 
+        /** UPDATED: deleteSite now removes from Firestore */
         function deleteSite() {
             const id = editSiteId.value;
             const address = editAddress.value;
             
             if (id) {
-                const deleteAction = () => {
-                    sites = sites.filter(s => s.id != id);
-                    renderSiteList();
-                    closeEditModal();
-                    
-                    const mainDetailsAddress = document.querySelector("#siteDetails .detail-value");
-                    if (mainDetailsAddress && mainDetailsAddress.textContent === address) {
-                         siteDetails.classList.add('hidden');
+                const deleteAction = async () => {
+                    if (!db || !sitesCollectionRef) {
+                        console.error("Firestore is not initialized.");
+                        return;
+                    }
+                    try {
+                        const docRef = doc(db, sitesCollectionRef.path, id);
+                        await deleteDoc(docRef);
+                        closeEditModal();
+                        // onSnapshot will auto-update the list
+                        
+                        // Also hide main page details
+                        const mainDetailsAddress = document.querySelector("#siteDetails .detail-value");
+                        if (mainDetailsAddress && mainDetailsAddress.textContent === address) {
+                             siteDetails.classList.add('hidden');
+                        }
+                    } catch (error) {
+                        console.error("Error deleting site:", error);
                     }
                 };
                 
@@ -1038,8 +1114,7 @@
             }
         }
         
-        // --- EVENT HANDLERS ---
-
+        // --- EVENT HANDLERS (Unchanged, except for selectSite) ---
         searchInput.addEventListener('input', () => {
             const query = searchInput.value.trim().toLowerCase();
             if (query.length === 0) {
@@ -1047,17 +1122,18 @@
                 return;
             }
             
+            // Use the global `sites` array which is populated by Firestore
             const matches = sites.filter(site => 
                 site.address.toLowerCase().includes(query)
             );
             renderSuggestions(matches);
         });
 
-        /** UPDATED: Corrected function call */
+        /** selectSite is unchanged */
         function selectSite(site) {
             searchInput.value = '';
             suggestions.classList.add('hidden');
-            animateSiteDetails(site); // Correctly calls animateSiteDetails
+            animateSiteDetails(site);
         }
 
         settingsButton.addEventListener('click', () => {
@@ -1067,12 +1143,11 @@
             accessCodeInput.focus();
         });
 
-        /** Updated: Handle Auth Form Submit with Animation */
         authForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (accessCodeInput.value === ACCESS_CODE) {
                 authModal.classList.add('hidden');
-                playAccessAnimation(); // Call new animation function
+                playAccessAnimation();
             } else {
                 authError.classList.add('hidden');
                 authModal.querySelector('.modal-content').classList.add('shake');
@@ -1082,69 +1157,53 @@
             }
         });
 
-        // New function to handle typing animation
+        // Animation function (unchanged)
         async function playAccessAnimation() {
             const textDeclined = "Declined";
             const textGranted = "Granted";
             
-            // Helper function for delays (now global)
-            // const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-            // Show overlay
-            typingEffectSpan.textContent = ''; // Clear text
-            typingEffectSpan.style.color = '#f44'; // Set color to red for "Declined"
+            typingEffectSpan.textContent = '';
+            typingEffectSpan.style.color = '#f44';
             accessGrantedOverlay.classList.remove('hidden');
 
-            const typingSpeed = 100; // ms per character
-            const backspaceSpeed = 60; // ms per character
-            const pauseTime = 500; // ms to wait after typing "Declined"
-            const finalPause = 1000; // ms to wait after typing "Granted"
+            const typingSpeed = 100;
+            const backspaceSpeed = 60;
+            const pauseTime = 500;
+            const finalPause = 1000;
 
-
-            // 1. Type "Declined"
             for (let i = 0; i < textDeclined.length; i++) {
                 typingEffectSpan.textContent += textDeclined[i];
                 await wait(typingSpeed);
             }
-
-            // 2. Pause
             await wait(pauseTime);
-
-            // 3. Backspace "Declined"
             for (let i = textDeclined.length; i > 0; i--) {
                 typingEffectSpan.textContent = typingEffectSpan.textContent.slice(0, -1);
                 await wait(backspaceSpeed);
             }
-
-            // 4. Change color and type "Granted"
-            typingEffectSpan.style.color = '#7f7'; // Set color to green
+            typingEffectSpan.style.color = '#7f7';
             for (let i = 0; i < textGranted.length; i++) {
                 typingEffectSpan.textContent += textGranted[i];
                 await wait(typingSpeed);
             }
-
-            // 5. Hide cursor and pause
-            cursorSpan.style.display = 'none'; // Hide cursor
+            cursorSpan.style.display = 'none';
             await wait(finalPause);
-
-            // 6. Hide overlay and show panel
             accessGrantedOverlay.classList.add('hidden');
-            cursorSpan.style.display = 'inline'; // Restore cursor for next time
-            renderSiteList();
+            cursorSpan.style.display = 'inline';
+            renderSiteList(); // Render list just before showing panel
             settingsPanel.classList.remove('hidden');
         }
 
-        // Close Modals
+        // Close Modals (unchanged)
         closeAuthModal.addEventListener('click', () => authModal.classList.add('hidden'));
         closeSettingsPanel.addEventListener('click', () => settingsPanel.classList.add('hidden'));
         cancelEditButton.addEventListener('click', closeEditModal);
 
-        // Edit/Create Actions
+        // Edit/Create Actions (unchanged)
         createSiteButton.addEventListener('click', () => openEditModal(null));
-        saveSiteButton.addEventListener('click', saveSite);
-        deleteSiteButton.addEventListener('click', deleteSite);
+        saveSiteButton.addEventListener('click', saveSite); // Now async
+        deleteSiteButton.addEventListener('click', deleteSite); // Now async
 
-        // Confirmation Modal Listeners
+        // Confirmation Modal Listeners (unchanged)
         cancelConfirmButton.addEventListener('click', closeConfirmModal);
         confirmDeleteButton.addEventListener('click', () => {
             if (typeof onConfirmCallback === 'function') {
@@ -1153,13 +1212,66 @@
             closeConfirmModal();
         });
         
-        // Global click listener to hide suggestions
+        // Global click listener (unchanged)
         document.addEventListener('click', (e) => {
             if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
                 suggestions.classList.add('hidden');
             }
         });
+
+        // --- NEW: FIREBASE INITIALIZATION ---
+        async function initializeFirebase() {
+            try {
+                // Get config and appID from global scope (provided by environment)
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+                if (!firebaseConfig.apiKey) {
+                    console.error("Firebase config is missing.");
+                    return;
+                }
+
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // Enable debug logging for Firestore
+                setLogLevel('Debug');
+
+                // Sign in the user
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listen for auth state changes to get the user ID
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("User signed in with ID:", userId);
+                        
+                        // Define the user-specific collection path
+                        const collectionPath = `artifacts/${appId}/users/${userId}/sites`;
+                        sitesCollectionRef = collection(db, collectionPath);
+                        
+                        // Now that we are authenticated and have a path, load the data
+                        loadInitialData();
+                    } else {
+                        console.log("User signed out.");
+                        userId = null;
+                        if(unsubscribeFromSites) unsubscribeFromSites();
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+            }
+        }
         
+        // Start the application
+        initializeFirebase();
+
     </script>
 </body>
 </html>
