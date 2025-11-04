@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Manager</title>
+    <style>
+        /* --- Animation Keyframes --- */
+        @keyframes smoothGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* New: Page load fade-in */
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Removed: Access Granted animation */
+        /* @keyframes accessGrantedPulse ... */
+
+        /* New: Cursor blink animation */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Base styles */
+        body {
+            background-color: #000;
+            color: #FFF;
+            font-family: 'monospace', 'Courier New', Courier;
+            margin: 0;
+            padding: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            /* Prevent scrollbars from background canvas */
+            overflow: hidden; 
+        }
+
+        /* Background canvas */
+        #nodeCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        /* Updated: Access Granted Overlay */
+        #accessGrantedOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200; /* On top of everything */
+            font-size: 2.5em;
+            color: #FFF; /* Base color for "Access " */
+            font-weight: bold;
+            /* Removed animation property */
+            /* Ensure it's hidden by default */
+            visibility: hidden;
+            opacity: 0;
+            /* Added transition for the overlay fade-in/out */
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+        
+        #accessGrantedOverlay:not(.hidden) {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* New: Styling for typing effect */
+        #typingEffect {
+            /* Color will be set by JS */
+            transition: color 0.3s ease;
+        }
+
+        #cursor {
+            animation: blink 1s step-end infinite;
+        }
+
+        /* Utility class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Button styling */
+        .btn {
+            background-color: #000;
+            color: #FFF;
+            border: 1px solid #FFF;
+            padding: 10px 15px;
+            font-family: 'monospace';
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px;
+            white-space: nowrap;
+            /* Updated transition */
+            transition: background-color 0.2s, color 0.2s, transform 0.2s ease;
+        }
+
+        .btn:hover, .btn:focus {
+            background-color: #FFF;
+            color: #000;
+            outline: none;
+            transform: translateY(-2px);
+        }
+
+        /* Updated: Added scale for click feedback */
+        .btn:active {
+            transform: translateY(1px) scale(0.97);
+            transition: transform 0.05s ease; /* Faster click transition */
+        }
+
+        /* Destructive button style */
+        .btn-danger {
+            border-color: #f44;
+            color: #f44;
+        }
+        .btn-danger:hover, .btn-danger:focus {
+            background-color: #FFF;
+            color: #000;
+            border-color: #f44;
+        }
+
+        /* Primary button style */
+        .btn-primary {
+            border-color: #7f7;
+            color: #7f7;
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: #FFF;
+            color: #000;
+            border-color: #7f7;
+        }
+
+        /* Input and Textarea styling */
+        input[type="text"],
+        input[type="password"] {
+            background-color: #111;
+            color: #FFF;
+            border: 1px solid #FFF;
+            padding: 10px;
+            font-family: 'monospace';
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #7af;
+            box-shadow: 0 0 5px #7af;
+        }
+
+        /* Main layout components */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Vertically center items */
+            padding: 10px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+            gap: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            /* New: Page load animation */
+            animation: pageFadeIn 0.5s ease-out;
+        }
+        
+        .control-container,
+        .settings-container {
+            flex-shrink: 0; /* Prevent buttons from shrinking */
+        }
+
+        .search-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #searchInput {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        #suggestions {
+            position: absolute;
+            top: 100%;
+            width: 100%;
+            max-width: 600px;
+            background: #111;
+            border: 1px solid #FFF;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            z-index: 10;
+        }
+
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #333;
+            /* Updated: Added transform to transition */
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background-color: #333;
+            /* New: Added hover indent */
+            transform: translateX(3px);
+        }
+
+        #settingsButton {
+            font-size: 24px;
+            padding: 5px 8px;
+            text-decoration: none;
+        }
+        
+        /* New: Style for More Control button */
+        #moreControlBtn {
+            text-decoration: none;
+            padding: 10px 15px;
+            font-size: 16px; /* Match other buttons */
+        }
+
+        /* Site details display */
+        #siteDetails {
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        #siteDetails:not(.hidden) {
+             animation: fadeInDown 0.3s ease-out;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #333;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #aaa;
+            padding-right: 20px;
+        }
+
+        .detail-value {
+            color: #FFF;
+            text-align: right;
+        }
+
+        /* Modal styling */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 0.2s ease, visibility 0.2s;
+            visibility: hidden;
+        }
+
+        .modal:not(.hidden) {
+            opacity: 1;
+            visibility: visible;
+            display: flex;
+        }
+
+        .modal-content {
+            background: #000;
+            border: 1px solid #FFF;
+            padding: 20px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 20px #555;
+            transform: translateY(-20px);
+            transition: transform 0.2s ease;
+        }
+
+        .modal:not(.hidden) .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        
+        .modal-footer-left {
+            margin-right: auto;
+        }
+
+        /* Auth modal specific shake animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Settings Panel list */
+        #siteList {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+
+        .site-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #111;
+            border-radius: 3px;
+            border: 1px solid #222;
+            /* Updated: Added transform to transition */
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        
+        .site-list-item:hover {
+            background-color: #222;
+            /* New: Added hover indent */
+            transform: translateX(3px);
+        }
+        
+        .site-list-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .site-list-address {
+            font-size: 1.1em;
+            color: #FFF;
+        }
+        
+        .site-list-manager {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        /* Form styling for edit/create */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            color: #aaa;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Canvas -->
+    <canvas id="nodeCanvas"></canvas>
+    
+    <!-- Updated: Access Granted Animation Overlay -->
+    <div id="accessGrantedOverlay" class="hidden">
+        <span>Access <span id="typingEffect"></span><span id-"cursor" id="cursor">_</span></span>
+    </div>
+
+    <!-- Main View -->
+    <div id="mainView">
+        <!-- Updated: Top Bar with new button -->
+        <div class="top-bar">
+            <div class="control-container">
+                <a id="moreControlBtn" href="https://xxxrkxxxrkxxx-ui.github.io/RochakKadelMap/" target="_blank" rel="noopener noreferrer" class="btn">More Control</a>
+            </div>
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search site address...">
+                <div id="suggestions" class="hidden"></div>
+            </div>
+            
+            <div class="settings-container">
+                <button id="settingsButton" class="btn" title="Settings">&#x2699;</button> <!-- Gear icon -->
+            </div>
+        </div>
+
+        <div id="siteDetails" class="hidden">
+            <!-- Site details will be populated here by JS -->
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Admin Panel</h2>
+                <button id="closeAuthModal" class="btn">&times;</button>
+            </div>
+            <form id="authForm">
+                <p>Enter access code.</p>
+                <input type="password" id="accessCodeInput" placeholder="Access Code">
+                <p id="authError" class="hidden" style="color: #f44;">Invalid Code</p>
+                <div class="modal-footer" style="border-top: none; padding-top: 0;">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Panel Modal -->
+    <div id="settingsPanel" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Sites</h2>
+                <button id="closeSettingsPanel" class="btn">&times;</button>
+            </div>
+            
+            <div id="siteList">
+                <!-- Site list will be populated by JS -->
+            </div>
+            
+            <div class="modal-footer">
+                <button id="createSiteButton" class="btn btn-primary">Create New Site</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Create Site Modal -->
+    <div id="editModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editModalTitle" class="modal-title">Edit Site</h2>
+            </div>
+            
+            <form id="editForm">
+                <input type="hidden" id="editSiteId">
+                
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="editAddress">Site Address</label>
+                        <input type="text" id="editAddress" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="editManager">Manager</label>
+                        <input type="text" id="editManager" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editBlazer">Blazer</label>
+                        <input type="text" id="editBlazer">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPant">Pant</label>
+                        <input type="text" id="editPant">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editShirt">Shirt</label>
+                        <input type="text" id="editShirt">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editTie">Tie</label>
+                        <input type="text" id="editTie">
+                    </div>
+                </div>
+            </form>
+            
+            <div class="modal-footer">
+                <button id="deleteSiteButton" class="btn btn-danger modal-footer-left">Delete</button>
+                <button id="cancelEditButton" class="btn">Cancel</button>
+                <button id="saveSiteButton" class="btn btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 id="confirmTitle" class="modal-title">Confirm Action</h2>
+            </div>
+            <p id="confirmMessage" style="white-space: pre-wrap; line-height: 1.5; margin: 20px 0;">Are you sure?</p>
+            <div class="modal-footer">
+                <button id="cancelConfirmButton" class="btn">Cancel</button>
+                <button id="confirmDeleteButton" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATABASE ---
+        let sites = [
+            // ... (Database remains unchanged) ...
+            { id: 1, manager: "Doug Fletcher", address: "736 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 2, manager: "Doug Fletcher", address: "600 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 3, manager: "Doug Fletcher", address: "120 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 4, manager: "Jason Daugherty", address: "1128 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 5, manager: "Jason Daugherty", address: "420 23rd St", uniform: { blazer: "Green Jacket", pant: "Cargo (Blk)", shirt: "Polo (Blk)", tie: "---" } },
+            { id: 6, manager: "Jason Daugherty", address: "1 La Avanzada St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 7, manager: "Jason Daugherty", address: "500 Howard St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 8, manager: "Jason Daugherty", address: "500 Pine St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 9, manager: "Jason Daugherty", address: "1800 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 10, manager: "Jason Daugherty", address: "130 Battery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 11, manager: "Jason Daugherty", address: "1400 Geary Blvd", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 12, manager: "Jason Daugherty", address: "300 Kansas St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 13, manager: "Jason Daugherty", address: "633 Folsom St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 14, manager: "Jason Daugherty", address: "501 2nd St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 15, manager: "Jason Daugherty", address: "111 Pine St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 16, manager: "Jason Daugherty", address: "400 Paul Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 17, manager: "Jason Daugherty", address: "1 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 18, manager: "Jason Daugherty", address: "1200 Van Ness Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 19, manager: "Aldo Diaz", address: "181 Fremont St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
+            { id: 20, manager: "Aldo Diaz", address: "274 Brannan St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
+            { id: 21, manager: "Aldo Diaz", address: "360 Spear St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Gray" } },
+            { id: 22, manager: "Aldo Diaz", address: "1035 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 23, manager: "Aldo Diaz", address: "150 Spear St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 24, manager: "Aldo Diaz", address: "750 Battery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 25, manager: "Aldo Diaz", address: "1635 Divisadero St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 26, manager: "Aldo Diaz", address: "115 Sansome St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 27, manager: "Aldo Diaz", address: "180 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 28, manager: "Aldo Diaz", address: "220 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 29, manager: "Aldo Diaz", address: "601 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 30, manager: "Aldo Diaz", address: "711 Eddy St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 31, manager: "Aldo Diaz", address: "1280 Laguna St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 32, manager: "Aldo Diaz", address: "71 Stevenson St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 33, manager: "Mohamed Ezzat", address: "240 Stockton St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 34, manager: "Mohamed Ezzat", address: "30 Grant Ave", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 35, manager: "Mohamed Ezzat", address: "170 Maiden Lane", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 36, manager: "Mohamed Ezzat", address: "599 Skyline Blvd", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 37, manager: "Mohamed Ezzat", address: "456 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 38, manager: "Mohamed Ezzat", address: "717 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 39, manager: "Mohamed Ezzat", address: "201 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 40, manager: "Mohamed Ezzat", address: "101 Mission St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 41, manager: "Mohamed Ezzat", address: "100 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 42, manager: "Mohamed Ezzat", address: "166 Geary St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 43, manager: "Inderprit Gill", address: "26 O'Farrell St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 44, manager: "Inderprit Gill", address: "153 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 45, manager: "Inderprit Gill", address: "110 Sutter St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 46, manager: "Inderprit Gill", address: "311 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 47, manager: "Inderprit Gill", address: "90 New Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 48, manager: "Inderprit Gill", address: "785 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 49, manager: "Inderprit Gill", address: "230 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 50, manager: "Inderprit Gill", address: "101 Montgomery St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 51, manager: "Inderprit Gill", address: "425 California St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 52, manager: "Inderprit Gill", address: "210 Post St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 53, manager: "Inderprit Gill", address: "30 Maiden Lane", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 54, manager: "Inderprit Gill", address: "222 Kearny St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 55, manager: "Inderprit Gill", address: "150 Post St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 56, manager: "Inderprit Gill", address: "1019 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+            { id: 57, manager: "Inderprit Gill", address: "425 Market St", uniform: { blazer: "Black", pant: "Black", shirt: "White", tie: "Black" } },
+        ];
+
+        // --- GLOBAL STATE ---
+        const ACCESS_CODE = "91965";
+        let onConfirmCallback = null;
+
+        // --- DOM ELEMENTS ---
+        const searchInput = document.getElementById('searchInput');
+        const suggestions = document.getElementById('suggestions');
+        const siteDetails = document.getElementById('siteDetails');
+        const settingsButton = document.getElementById('settingsButton');
+
+        // New: Access Granted Overlay elements
+        const accessGrantedOverlay = document.getElementById('accessGrantedOverlay');
+        const typingEffectSpan = document.getElementById('typingEffect');
+        const cursorSpan = document.getElementById('cursor');
+        
+        // Auth Modal
+        const authModal = document.getElementById('authModal');
+        const closeAuthModal = document.getElementById('closeAuthModal');
+        const authForm = document.getElementById('authForm');
+        const accessCodeInput = document.getElementById('accessCodeInput');
+        const authError = document.getElementById('authError');
+
+        // Settings Panel
+        const settingsPanel = document.getElementById('settingsPanel');
+        const closeSettingsPanel = document.getElementById('closeSettingsPanel');
+        const siteList = document.getElementById('siteList');
+        const createSiteButton = document.getElementById('createSiteButton');
+        
+        // Edit Modal
+        const editModal = document.getElementById('editModal');
+        const editModalTitle = document.getElementById('editModalTitle');
+        const cancelEditButton = document.getElementById('cancelEditButton');
+        const saveSiteButton = document.getElementById('saveSiteButton');
+        const deleteSiteButton = document.getElementById('deleteSiteButton');
+        const editForm = document.getElementById('editForm');
+        const editSiteId = document.getElementById('editSiteId');
+        const editAddress = document.getElementById('editAddress');
+        const editManager = document.getElementById('editManager');
+        const editBlazer = document.getElementById('editBlazer');
+        const editPant = document.getElementById('editPant');
+        const editShirt = document.getElementById('editShirt');
+        const editTie = document.getElementById('editTie');
+
+        // Confirmation Modal
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const cancelConfirmButton = document.getElementById('cancelConfirmButton');
+        const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+
+        // --- GLOBAL HELPER ---
+        /** Helper function for delays */
+        const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // --- NODE BACKGROUND LOGIC ---
+        const canvas = document.getElementById('nodeCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 20;
+        const connectDistance = 220;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.15;
+                this.vy = (Math.random() - 0.5) * 0.15;
+                this.value = Math.random() < 0.5 ? '0' : '1';
+                this.opacity = 0;
+                this.life = Math.random() * 300 + 200;
+                this.fadeIn = true;
+            }
+
+            draw() {
+                if (this.fadeIn) {
+                    this.opacity += 0.008;
+                    if (this.opacity >= 0.7) this.fadeIn = false;
+                } else {
+                    this.life--;
+                    if (this.life <= 0) this.opacity -= 0.008;
+                }
+                
+                if(this.opacity <= 0) {
+                    this.reset();
+                }
+
+                ctx.font = '16px monospace';
+                ctx.fillStyle = `rgba(0, 255, 0, ${this.opacity})`;
+                ctx.fillText(this.value, this.x, this.y);
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.15;
+                this.vy = (Math.random() - 0.5) * 0.15;
+                this.value = Math.random() < 0.5 ? '0' : '1';
+                this.opacity = 0;
+                this.life = Math.random() * 300 + 200;
+                this.fadeIn = true;
+            }
+        }
+
+        function createParticles() {
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function connectParticles() {
+            for (let a = 0; a < particles.length; a++) {
+                for (let b = a + 1; b < particles.length; b++) {
+                    const dx = particles[a].x - particles[b].x;
+                    const dy = particles[a].y - particles[b].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < connectDistance) {
+                        const lineOpacity = (1 - (distance / connectDistance)) * 0.3;
+                        const combinedOpacity = Math.min(particles[a].opacity, particles[b].opacity, lineOpacity);
+                        
+                        if (combinedOpacity > 0) {
+                            ctx.strokeStyle = `rgba(0, 255, 0, ${combinedOpacity})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[a].x, particles[a].y);
+                            ctx.lineTo(particles[b].x, particles[b].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => p.draw());
+            connectParticles();
+
+            requestAnimationFrame(animate);
+        }
+
+        createParticles();
+        animate();
+
+        // --- RENDER FUNCTIONS ---
+
+        function renderSuggestions(matches) {
+            if (matches.length === 0) {
+                suggestions.classList.add('hidden');
+                return;
+            }
+            suggestions.innerHTML = '';
+            matches.forEach(site => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = site.address;
+                item.dataset.address = site.address;
+                item.addEventListener('click', () => selectSite(site));
+                suggestions.appendChild(item);
+            });
+            suggestions.classList.remove('hidden');
+        }
+
+        /** Renders the static shell for site details */
+        function setupSiteDetails() {
+            siteDetails.innerHTML = `
+                <button id="backButton" class="btn" style="margin-bottom: 15px; margin-left: 0;">&larr; Back</button>
+                <div class="detail-item">
+                    <span class="detail-label">Address</span>
+                    <span class="detail-value" id="detailAddress"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Manager</span>
+                    <span class="detail-value" id="detailManager"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Blazer</span>
+                    <span class="detail-value" id="detailBlazer"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Pant</span>
+                    <span class="detail-value" id="detailPant"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Shirt</span>
+                    <span class="detail-value" id="detailShirt"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Tie</span>
+                    <span class="detail-value" id="detailTie"></span>
+                </div>
+            `;
+            
+            // Add listener for the new back button
+            siteDetails.querySelector('#backButton').addEventListener('click', () => {
+                siteDetails.classList.add('hidden');
+                searchInput.value = '';
+                searchInput.focus();
+            });
+
+            siteDetails.classList.remove('hidden');
+        }
+        
+        /** NEW: Animates the site details with a typewriter effect */
+        async function animateSiteDetails(site) {
+            // 1. Render the static shell
+            setupSiteDetails();
+
+            // 2. Get references to the value spans
+            const detailAddress = document.getElementById('detailAddress');
+            const detailManager = document.getElementById('detailManager');
+            const detailBlazer = document.getElementById('detailBlazer');
+            const detailPant = document.getElementById('detailPant');
+            const detailShirt = document.getElementById('detailShirt');
+            const detailTie = document.getElementById('detailTie');
+
+            // 3. Define the jobs
+            const jobs = [
+                { el: detailAddress, text: site.address },
+                { el: detailManager, text: site.manager },
+                { el: detailBlazer, text: site.uniform.blazer || '---' },
+                { el: detailPant, text: site.uniform.pant || '---' },
+                { el: detailShirt, text: site.uniform.shirt || '---' },
+                { el: detailTie, text: site.uniform.tie || '---' },
+            ];
+
+            // 4. Calculate total characters and speed
+            const totalChars = jobs.reduce((acc, job) => acc + job.text.length, 0);
+            const totalDuration = 2000; // 2 seconds
+            const speed = totalDuration / totalChars; // ms per character
+
+            // 5. Define the helper function to type one line
+            async function typeLine(element, text, charSpeed) {
+                element.textContent = ''; // Clear it
+                let currentText = '';
+                const cursorHTML = `<span style="animation: blink 1s step-end infinite;">_</span>`;
+                
+                for (let i = 0; i < text.length; i++) {
+                    currentText += text[i];
+                    element.innerHTML = `${currentText}${cursorHTML}`;
+                    await wait(charSpeed);
+                }
+                
+                element.textContent = text; // Set final text without cursor
+            }
+
+            // 6. Execute the jobs sequentially
+            for (const job of jobs) {
+                await typeLine(job.el, job.text, speed);
+            }
+        }
+        
+        /** Renders the list of all sites in the settings panel */
+        function renderSiteList() {
+            siteList.innerHTML = '';
+            if (sites.length === 0) {
+                siteList.innerHTML = '<p style="text-align: center; color: #aaa;">No sites found. Create one!</p>';
+                return;
+            }
+            
+            const sortedSites = [...sites].sort((a, b) => a.address.localeCompare(b.address));
+            
+            sortedSites.forEach(site => {
+                const item = document.createElement('div');
+                item.className = 'site-list-item';
+                item.dataset.id = site.id;
+                
+                item.innerHTML = `
+                    <div class="site-list-info">
+                        <span class="site-list-address">${site.address}</span>
+                        <span class="site-list-manager">${site.manager}</span>
+                    </div>
+                    <button class="btn edit-btn">Edit</button>
+                `;
+                
+                item.querySelector('.edit-btn').addEventListener('click', () => openEditModal(site));
+                siteList.appendChild(item);
+            });
+        }
+
+        <!-- DELETED BROKEN CODE BLOCK -->
+        <!-- The syntax error was here. A mangled copy of openEditModal and a duplicate selectSite was removed. -->
+
+        function openEditModal(site) {
+            if (site) {
+                // Editing existing site
+                editModalTitle.textContent = 'Edit Site';
+                editSiteId.value = site.id;
+                editAddress.value = site.address;
+                editManager.value = site.manager;
+                editBlazer.value = site.uniform.blazer;
+                editPant.value = site.uniform.pant;
+                editShirt.value = site.uniform.shirt;
+                editTie.value = site.uniform.tie;
+                deleteSiteButton.classList.remove('hidden');
+            } else {
+                // Creating new site
+                editModalTitle.textContent = 'Create New Site';
+                editForm.reset();
+                editSiteId.value = '';
+                deleteSiteButton.classList.add('hidden');
+            }
+            editModal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            editModal.classList.add('hidden');
+            editForm.reset();
+        }
+
+        function openConfirmModal(title, message, callback) {
+            confirmTitle.textContent = title;
+            confirmMessage.textContent = message;
+            onConfirmCallback = callback;
+            confirmModal.classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            confirmModal.classList.add('hidden');
+            onConfirmCallback = null;
+        }
+
+        function saveSite() {
+            const id = editSiteId.value;
+            const updatedSite = {
+                address: editAddress.value,
+                manager: editManager.value,
+                uniform: {
+                    blazer: editBlazer.value,
+                    pant: editPant.value,
+                    shirt: editShirt.value,
+                    tie: editTie.value,
+                }
+            };
+            
+            if (!updatedSite.address || !updatedSite.manager) {
+                console.error("Address and Manager are required.");
+                return;
+            }
+
+            if (id) {
+                const index = sites.findIndex(s => s.id == id);
+                if (index !== -1) {
+                    sites[index] = { ...sites[index], ...updatedSite };
+                }
+            } else {
+                updatedSite.id = Date.now();
+                sites.push(updatedSite);
+            }
+            
+            renderSiteList();
+            closeEditModal();
+        }
+
+        function deleteSite() {
+            const id = editSiteId.value;
+            const address = editAddress.value;
+            
+            if (id) {
+                const deleteAction = () => {
+                    sites = sites.filter(s => s.id != id);
+                    renderSiteList();
+                    closeEditModal();
+                    
+                    const mainDetailsAddress = document.querySelector("#siteDetails .detail-value");
+                    if (mainDetailsAddress && mainDetailsAddress.textContent === address) {
+                         siteDetails.classList.add('hidden');
+                    }
+                };
+                
+                openConfirmModal(
+                    'Confirm Deletion', 
+                    `Are you sure you want to delete this site?\n\n${address}\n\nThis action cannot be undone.`,
+                    deleteAction
+                );
+            }
+        }
+        
+        // --- EVENT HANDLERS ---
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.trim().toLowerCase();
+            if (query.length === 0) {
+                suggestions.classList.add('hidden');
+                return;
+            }
+            
+            const matches = sites.filter(site => 
+                site.address.toLowerCase().includes(query)
+            );
+            renderSuggestions(matches);
+        });
+
+        /** UPDATED: Corrected function call */
+        function selectSite(site) {
+            searchInput.value = '';
+            suggestions.classList.add('hidden');
+            animateSiteDetails(site); // Correctly calls animateSiteDetails
+        }
+
+        settingsButton.addEventListener('click', () => {
+            authError.classList.add('hidden');
+            accessCodeInput.value = '';
+            authModal.classList.remove('hidden');
+            accessCodeInput.focus();
+        });
+
+        /** Updated: Handle Auth Form Submit with Animation */
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (accessCodeInput.value === ACCESS_CODE) {
+                authModal.classList.add('hidden');
+                playAccessAnimation(); // Call new animation function
+            } else {
+                authError.classList.add('hidden');
+                authModal.querySelector('.modal-content').classList.add('shake');
+                setTimeout(() => {
+                    authModal.querySelector('.modal-content').classList.remove('shake');
+                }, 500);
+            }
+        });
+
+        // New function to handle typing animation
+        async function playAccessAnimation() {
+            const textDeclined = "Declined";
+            const textGranted = "Granted";
+            
+            // Helper function for delays (now global)
+            // const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            // Show overlay
+            typingEffectSpan.textContent = ''; // Clear text
+            typingEffectSpan.style.color = '#f44'; // Set color to red for "Declined"
+            accessGrantedOverlay.classList.remove('hidden');
+
+            const typingSpeed = 100; // ms per character
+            const backspaceSpeed = 60; // ms per character
+            const pauseTime = 500; // ms to wait after typing "Declined"
+            const finalPause = 1000; // ms to wait after typing "Granted"
+
+
+            // 1. Type "Declined"
+            for (let i = 0; i < textDeclined.length; i++) {
+                typingEffectSpan.textContent += textDeclined[i];
+                await wait(typingSpeed);
+            }
+
+            // 2. Pause
+            await wait(pauseTime);
+
+            // 3. Backspace "Declined"
+            for (let i = textDeclined.length; i > 0; i--) {
+                typingEffectSpan.textContent = typingEffectSpan.textContent.slice(0, -1);
+                await wait(backspaceSpeed);
+            }
+
+            // 4. Change color and type "Granted"
+            typingEffectSpan.style.color = '#7f7'; // Set color to green
+            for (let i = 0; i < textGranted.length; i++) {
+                typingEffectSpan.textContent += textGranted[i];
+                await wait(typingSpeed);
+            }
+
+            // 5. Hide cursor and pause
+            cursorSpan.style.display = 'none'; // Hide cursor
+            await wait(finalPause);
+
+            // 6. Hide overlay and show panel
+            accessGrantedOverlay.classList.add('hidden');
+            cursorSpan.style.display = 'inline'; // Restore cursor for next time
+            renderSiteList();
+            settingsPanel.classList.remove('hidden');
+        }
+
+        // Close Modals
+        closeAuthModal.addEventListener('click', () => authModal.classList.add('hidden'));
+        closeSettingsPanel.addEventListener('click', () => settingsPanel.classList.add('hidden'));
+        cancelEditButton.addEventListener('click', closeEditModal);
+
+        // Edit/Create Actions
+        createSiteButton.addEventListener('click', () => openEditModal(null));
+        saveSiteButton.addEventListener('click', saveSite);
+        deleteSiteButton.addEventListener('click', deleteSite);
+
+        // Confirmation Modal Listeners
+        cancelConfirmButton.addEventListener('click', closeConfirmModal);
+        confirmDeleteButton.addEventListener('click', () => {
+            if (typeof onConfirmCallback === 'function') {
+                onConfirmCallback();
+            }
+            closeConfirmModal();
+        });
+        
+        // Global click listener to hide suggestions
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+                suggestions.classList.add('hidden');
+            }
+        });
+        
+    </script>
+</body>
+</html>
+
